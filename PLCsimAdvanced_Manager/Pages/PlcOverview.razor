@@ -20,11 +20,19 @@
         <ToolBarContent>
             <div style="display: flex; justify-content: space-between;">
                 @inject IDialogService DialogService
-                <MudButton  Color="Color.Success" @onclick="OpenDialogNewPLC" Variant="Variant.Filled" Class="mr-2">
+                <MudButton Color="Color.Success" @onclick="OpenDialogNewPLC" Variant="Variant.Filled" Class="mr-2">
                     Create new PLC
                 </MudButton>
                 <MudButton @onclick="OpenDialogStorage" Variant="Variant.Filled">
                     Storage
+                </MudButton>
+                <MudButton 
+                   Color="@RunAllButtonColor" 
+                   Variant="Variant.Filled" 
+                   Class="ml-2"
+                   StartIcon="@RunAllButtonIcon"
+                   @onclick="RunOrStopAllPLCs">
+                @RunAllButtonText
                 </MudButton>
             </div>
         </ToolBarContent>
@@ -130,4 +138,5 @@
         Selector = (e) => e.CommunicationInterface
     };
     
+    private Color RunAllButtonColor => AnyPLCIsRunning ? Color.Error : Color.Success;
 }

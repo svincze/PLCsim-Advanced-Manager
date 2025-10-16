@@ -29,7 +29,7 @@ public partial class PlcOverview
 
     private void OnIssue(object? sender, Exception e)
     {
-     Snackbar.Add(e.Message, Severity.Error);   
+        Snackbar.Add(e.Message, Severity.Error);
     }
 
 
@@ -43,7 +43,7 @@ public partial class PlcOverview
     private void OpenDialogStorage()
     {
         DialogOptions closeOnEscapeKey = new DialogOptions()
-            { CloseOnEscapeKey = true, FullWidth = true, CloseButton = true };
+        { CloseOnEscapeKey = true, FullWidth = true, CloseButton = true };
 
         DialogService.Show<StorageDialog>("Storage", closeOnEscapeKey);
     }
@@ -51,7 +51,7 @@ public partial class PlcOverview
     private void OpenDialogSetIPSettings(IInstance selectedInstance)
     {
         DialogOptions closeOnEscapeKey = new DialogOptions()
-            { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, CloseButton = true };
+        { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, CloseButton = true };
         var parameters = new DialogParameters();
         parameters.Add("selectedInstance", selectedInstance);
         DialogService.Show<SetIPSettingsDialog>($"IP Settings: {selectedInstance.Name}", parameters, closeOnEscapeKey);
@@ -60,7 +60,7 @@ public partial class PlcOverview
     private void OpenDialogPLCSettings(IInstance selectedInstance)
     {
         DialogOptions closeOnEscapeKey = new DialogOptions()
-            { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
         var parameters = new DialogParameters();
         parameters.Add("selectedInstance", selectedInstance);
 
@@ -70,7 +70,7 @@ public partial class PlcOverview
     private void OpenDialogNetInterfaceMapping(IInstance selectedInstance)
     {
         DialogOptions closeOnEscapeKey = new DialogOptions()
-            { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
         var parameters = new DialogParameters();
         parameters.Add("selectedInstance", selectedInstance);
 
@@ -81,7 +81,7 @@ public partial class PlcOverview
     private void OpenDialogSnapshots(IInstance selectedInstance)
     {
         DialogOptions closeOnEscapeKey = new DialogOptions()
-            { CloseOnEscapeKey = true, FullWidth = true, CloseButton = true };
+        { CloseOnEscapeKey = true, FullWidth = true, CloseButton = true };
         var parameters = new DialogParameters();
         parameters.Add("selectedInstance", selectedInstance);
         DialogService.Show<SnapshotsDialog>("Snapshots", parameters, closeOnEscapeKey);
@@ -97,12 +97,53 @@ public partial class PlcOverview
 
         DialogService.Show<DeleteDialog>("Delete Instance", parameters, options);
     }
-    
+
 
     public void SeeSnapshots(IInstance instane)
     {
         OpenDialogSnapshots(instane);
     }
+
+    private string RunAllButtonText => AnyPLCIsRunning ? "Stop All" : "Run All";
+    private string RunAllButtonIcon => AnyPLCIsRunning ? Icons.Material.Outlined.Stop : Icons.Material.Outlined.PlayArrow;
+
+    private bool AnyPLCIsRunning => managerFacade.InstanceHandler._instances.Any(i => i.OperatingState == EOperatingState.Run);
+
+    private void RunOrStopAllPLCs()
+    {
+        if (AnyPLCIsRunning)
+        {
+            foreach (var instance in managerFacade.InstanceHandler._instances)
+            {
+                try
+                {
+                    if (instance.OperatingState == EOperatingState.Run)
+                        instance.Stop();
+                }
+                catch (Exception e)
+                {
+                    Snackbar.Add($"Failed to stop {instance.Name}: {e.Message}", Severity.Error);
+                }
+            }
+        }
+        else
+        {
+            foreach (var instance in managerFacade.InstanceHandler._instances)
+            {
+                try
+                {
+                    if (instance.OperatingState == EOperatingState.Stop)
+                        instance.Run();
+                }
+                catch (Exception e)
+                {
+                    Snackbar.Add($"Failed to run {instance.Name}: {e.Message}", Severity.Error);
+                }
+            }
+        }
+    }
+
+
 
     private string selectedRowStyleFunc(IInstance i, int rowNumber)
     {
