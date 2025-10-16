@@ -1,0 +1,19 @@
+﻿@using PLCsimAdvanced_Manager.Services
+@using Color = MudBlazor.Color
+@using Siemens.Simatic.Simulation.Runtime
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">@Message</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="() => MudDialog.Close(DialogResult.Ok(true))">Confirm</MudButton>
+        <MudButton Color="Color.Default" OnClick="() => MudDialog.Cancel()">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string Message { get; set; }
+}

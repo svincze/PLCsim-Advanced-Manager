@@ -143,6 +143,24 @@ public partial class PlcOverview
         }
     }
 
+    private async Task ConfirmRunOrStopAllPLCs()
+    {
+        var message = AnyPLCIsRunning
+            ? "Are you sure you want to stop all running PLCs?"
+            : "Are you sure you want to run all stopped PLCs?";
+
+        var parameters = new DialogParameters { ["Message"] = message };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+
+        var dialog = DialogService.Show<ConfirmActionDialog>("Confirm Action", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            RunOrStopAllPLCs();
+        }
+    }
+
 
 
     private string selectedRowStyleFunc(IInstance i, int rowNumber)
