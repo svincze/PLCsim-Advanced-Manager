@@ -5,45 +5,50 @@
 
 <MudDialog>
     <DialogContent>
-        Size: @rootDirectorySize
-        @SimulationRuntimeManager.DefaultStoragePath
-
-        <MudSimpleTable>
-            <MudTh>Name</MudTh>
-            <MudTh Style="text-align: right;">Actions</MudTh>
-
-            @foreach (var directory in Directory.GetDirectories(@SimulationRuntimeManager.DefaultStoragePath))
-            {
-                var dir = directory; // Create a local copy to avoid issues with the foreach loop
-                var isRunning = SimulationRuntimeManager.RegisteredInstanceInfo.Any(e => e.Name == Path.GetFileName(directory));
-
-                <MudTr>
-                    <MudTd>
-                        <MudChip Size="Size.Small" Disabled="@isRunning" Variant="Variant.Text" Color="Color.Info">
-                            <MudText Typo="Typo.h6">
-                                <strong>@Path.GetFileName(directory)</strong>
-                            </MudText>
-                        </MudChip>
-                    </MudTd>
-                    <MudTd Style="text-align: right;">
-                        <MudButtonGroup OverrideStyles="false">
-                            <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Success" OnClick="() => RegisterInstance(dir)">Register</MudButton>
-                            <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Warning" OnClick="() => OpenRenameDialog(dir)">Rename</MudButton>
-                            <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Info" OnClick="() => DuplicateDirectory(dir)">Duplicate</MudButton>
-                            <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Error" OnClick="() => DeleteDirectory(dir)">Delete</MudButton>
-                        </MudButtonGroup>
-                    </MudTd>
-                </MudTr>
-            }
-        </MudSimpleTable>
-        <MudDialog @bind-IsVisible="renameDialog" CloseButton="true">
-            <DialogContent>
-                <MudTextField @bind-Value="@newDirectoryName" Label="New instance name"/>
-            </DialogContent>
-            <DialogActions>
-                <MudButton Color="Color.Primary" OnClick="RenameDirectory">Rename</MudButton>
-            </DialogActions>
-        </MudDialog>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+                Size: @rootDirectorySize
+                <br />
+                @SimulationRuntimeManager.DefaultStoragePath
+            </div>
+            <MudButton Color="Color.Info" Variant="Variant.Filled" OnClick="RegisterAllInstances" Style="align-self: flex-start;">
+                Register All
+            </MudButton>
+            <MudSimpleTable>
+                <MudTh>Name</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+                @foreach (var directory in Directory.GetDirectories(@SimulationRuntimeManager.DefaultStoragePath))
+                {
+                    var dir = directory;
+                    var isRunning = SimulationRuntimeManager.RegisteredInstanceInfo.Any(e => e.Name == Path.GetFileName(directory));
+                    <MudTr>
+                        <MudTd>
+                            <MudChip Size="Size.Small" Disabled="@isRunning" Variant="Variant.Text" Color="Color.Info">
+                                <MudText Typo="Typo.h6">
+                                    <strong>@Path.GetFileName(directory)</strong>
+                                </MudText>
+                            </MudChip>
+                        </MudTd>
+                        <MudTd Style="text-align: right;">
+                            <MudButtonGroup OverrideStyles="false">
+                                <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Success" OnClick="() => RegisterInstance(dir)">Register</MudButton>
+                                <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Warning" OnClick="() => OpenRenameDialog(dir)">Rename</MudButton>
+                                <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Info" OnClick="() => DuplicateDirectory(dir)">Duplicate</MudButton>
+                                <MudButton Size="Size.Small" Disabled="@isRunning" Variant="Variant.Outlined" Color="Color.Error" OnClick="() => DeleteDirectory(dir)">Delete</MudButton>
+                            </MudButtonGroup>
+                        </MudTd>
+                    </MudTr>
+                }
+            </MudSimpleTable>
+            <MudDialog @bind-IsVisible="renameDialog" CloseButton="true">
+                <DialogContent>
+                    <MudTextField @bind-Value="@newDirectoryName" Label="New instance name" />
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Color="Color.Primary" OnClick="RenameDirectory">Rename</MudButton>
+                </DialogActions>
+            </MudDialog>
+        </div>
     </DialogContent>
 </MudDialog>
 
@@ -121,6 +126,29 @@
         catch (Exception e)
         {
             Snackbar.Add($"Failed to register instance {instanceName}. Error: {e.Message}", Severity.Error);
+        }
+    }
+
+    private void RegisterAllInstances( )
+    {
+        var registeredNames = SimulationRuntimeManager.RegisteredInstanceInfo.Select(e => e.Name).ToHashSet();
+        var storageDirectories = Directory.GetDirectories(SimulationRuntimeManager.DefaultStoragePath);
+
+        var nonRegistered = storageDirectories
+        .Select(Path.GetFileName)
+        .Where(name => !registeredNames.Contains(name));
+
+        foreach (var instanceName in nonRegistered)
+        {
+            try
+            {
+                SimulationRuntimeManager.RegisterInstance(instanceName);
+                Snackbar.Add($"Registered {instanceName}", Severity.Success);
+            }
+            catch (Exception e)
+            {
+                Snackbar.Add($"Failed to register instance {instanceName}. Error: {e.Message}", Severity.Error);
+            }
         }
     }
 
