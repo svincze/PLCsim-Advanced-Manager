@@ -26,17 +26,27 @@
                 <MudButton @onclick="OpenDialogStorage" Variant="Variant.Filled">
                     Storage
                 </MudButton>
-                <MudButton 
-                   Color="@RunAllButtonColor" 
-                   Variant="Variant.Filled" 
-                   Class="ml-2"
-                   StartIcon="@RunAllButtonIcon"
-                   @onclick="ConfirmRunOrStopAllPLCs">
-                @RunAllButtonText
-                </MudButton>
+                <MudTooltip Text="Runs/Stop each registered PLC instance">
+                    <MudButton 
+                       Color="@RunAllButtonColor" 
+                       Variant="Variant.Filled" 
+                       Class="ml-2"
+                       StartIcon="@RunAllButtonIcon"
+                       @onclick="ConfirmRunOrStopAllPLCs">
+                    @RunAllButtonText
+                    </MudButton>
+                </MudTooltip>
+                 <MudTooltip Text="Assign a CPU core to each PLC instance for process affinity">
+                    <MudButton Color="Color.Warning" Variant="Variant.Filled" Class="ml-2"
+                    StartIcon="@Icons.Material.Outlined.Memory"
+                    @onclick="ConfirmSetCpuAffinity">
+                    Assign CPU Affinity
+                    </MudButton>
+                </MudTooltip>
             </div>
         </ToolBarContent>
         <ColGroup>
+            <col/>
             <col/>
             <col/>
             <col/>
@@ -50,6 +60,7 @@
             <MudTh>Controller IP</MudTh>
             <MudTh>CPU type</MudTh>
             <MudTh>Controller Name</MudTh>
+            <MudTh>Assigned CPU</MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <GroupHeaderTemplate>
@@ -94,8 +105,10 @@
             </MudTd>
             <MudTd DataLabel="CPU type">@context.CPUType</MudTd>
             <MudTd DataLabel="Controller Name">@context.ControllerName</MudTd>
+            <MudTd DataLabel="Assigned CPU">
+                @(instanceCpuAffinity.TryGetValue(context, out var cpu) ? cpu.ToString() : "N/A")
+            </MudTd>
             <MudTd >
-            
                 @if (context.CommunicationInterface == ECommunicationInterface.TCPIP)
                 {
                     <MudTooltip Text="When powered off, this will swap communication interface">

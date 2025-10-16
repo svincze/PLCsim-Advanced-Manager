@@ -3,6 +3,7 @@ using PLCsimAdvanced_Manager.Components;
 using PLCsimAdvanced_Manager.Components.Instance;
 using PLCsimAdvanced_Manager.Services;
 using Siemens.Simatic.Simulation.Runtime;
+using System.Diagnostics;
 
 namespace PLCsimAdvanced_Manager.Pages;
 
@@ -12,6 +13,7 @@ public partial class PlcOverview
     // private IInstance? _selectedInstance;
     private MudTable<IInstance> mudTable;
     private bool IsEditingCommunicationInterface = false;
+    private Dictionary<IInstance, int> instanceCpuAffinity = new();
 
     protected override void OnInitialized()
     {
@@ -143,25 +145,35 @@ public partial class PlcOverview
         }
     }
 
+    private async Task ShowConfirmation(string message, Func<Task> onConfirmed)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Message"] = message,
+            ["OnConfirmed"] = onConfirmed
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+
+        var dialog = DialogService.Show<ConfirmActionDialog>("Confirm Action", parameters, options);
+        await dialog.Result;
+    }
+
+    // Usage:
     private async Task ConfirmRunOrStopAllPLCs()
     {
         var message = AnyPLCIsRunning
             ? "Are you sure you want to stop all running PLCs?"
             : "Are you sure you want to run all stopped PLCs?";
 
-        var parameters = new DialogParameters { ["Message"] = message };
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
-
-        var dialog = DialogService.Show<ConfirmActionDialog>("Confirm Action", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Cancelled)
-        {
-            RunOrStopAllPLCs();
-        }
+        await ShowConfirmation(message, async () => RunOrStopAllPLCs());
     }
 
+    private async Task ConfirmSetCpuAffinity()
+    {
+        var message = "Assign CPU affinity for all PLC instances?";
 
+        await ShowConfirmation(message, async () => AssignCpuAffinityToAllInstances());
+    }
 
     private string selectedRowStyleFunc(IInstance i, int rowNumber)
     {
@@ -171,5 +183,33 @@ public partial class PlcOverview
         }
 
         return string.Empty;
+    }
+
+    private void AssignCpuAffinityToAllInstances()
+    {
+        int cpuIndex = 1;
+        int cpuCount = Environment.ProcessorCount;
+        int defaultMask = 255;
+        var processes = Process.GetProcessesByName("Siemens.Simatic.Simulation.Runtime.Instance.x64");
+        var instances = managerFacade.InstanceHandler._instances;
+        if (processes.Count() != 0 && instances.Count() != 0)
+        {
+            for (int i = 0; i < managerFacade.InstanceHandler._instances.Count; i++)
+            {
+                var instance = managerFacade.InstanceHandler._instances[i];
+                var proc = processes[i];
+                if (proc != null & instance != null)
+                {
+                    //This line creates a bitmask that selects a specific CPU core for processor affinity.
+                    //By shifting 1 left by the calculated amount, you get a mask that targets one core at a time,
+                    //cycling through available CPUs.
+                    //This is commonly used to assign processes or threads to specific CPU cores in a round-robin fashion.
+                    long affinityMask = 1L << (cpuIndex % cpuCount); // Assign round-robin
+                    proc.ProcessorAffinity = processes.Count() > cpuCount ? defaultMask : (IntPtr)affinityMask;
+                    instanceCpuAffinity[instance] = cpuIndex % cpuCount; // Store assigned CPU
+                    cpuIndex++;
+                }
+            }
+        }
     }
 }
