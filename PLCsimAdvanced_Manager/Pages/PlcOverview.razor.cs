@@ -191,19 +191,16 @@ public partial class PlcOverview
         int cpuCount = Environment.ProcessorCount;
         int defaultMask = 255;
         var processes = Process.GetProcessesByName("Siemens.Simatic.Simulation.Runtime.Instance.x64");
-        var instances = managerFacade.InstanceHandler._instances;
-        if (processes.Count() != 0 && instances.Count() != 0)
+        var instances = managerFacade.InstanceHandler._instances.Where(_w => _w.OperatingState == EOperatingState.Run).ToList();
+
+        if (processes.Count() != 0 && instances.Count != 0)
         {
-            for (int i = 0; i < managerFacade.InstanceHandler._instances.Count; i++)
+            for (int i = 0; i < instances.Count; i++)
             {
-                var instance = managerFacade.InstanceHandler._instances[i];
+                var instance = instances[i];
                 var proc = processes[i];
-                if (proc != null & instance != null)
+                if (proc != null && instance != null)
                 {
-                    //This line creates a bitmask that selects a specific CPU core for processor affinity.
-                    //By shifting 1 left by the calculated amount, you get a mask that targets one core at a time,
-                    //cycling through available CPUs.
-                    //This is commonly used to assign processes or threads to specific CPU cores in a round-robin fashion.
                     long affinityMask = 1L << (cpuIndex % cpuCount); // Assign round-robin
                     proc.ProcessorAffinity = processes.Count() > cpuCount ? defaultMask : (IntPtr)affinityMask;
                     instanceCpuAffinity[instance] = cpuIndex % cpuCount; // Store assigned CPU
