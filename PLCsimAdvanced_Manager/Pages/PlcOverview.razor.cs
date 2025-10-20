@@ -106,73 +106,68 @@ public partial class PlcOverview
         OpenDialogSnapshots(instane);
     }
 
-    private string RunAllButtonText => AnyPLCIsRunning ? "Stop All" : "Run All";
-    private string RunAllButtonIcon => AnyPLCIsRunning ? Icons.Material.Outlined.Stop : Icons.Material.Outlined.PlayArrow;
+    private bool AnyInstanceRegistered => managerFacade.InstanceHandler._instances.Count() > 0;
+    private bool AnyInstancePoweredOff => managerFacade.InstanceHandler._instances.Any(i => i.OperatingState == EOperatingState.Off);
+    private bool AnyInstancePoweredOn => managerFacade.InstanceHandler._instances.Any(i => i.OperatingState != EOperatingState.Off);
+    private bool AnyIstanceIsRunning => managerFacade.InstanceHandler._instances.Any(i => i.OperatingState == EOperatingState.Run);
 
-    private bool AnyPLCIsRunning => managerFacade.InstanceHandler._instances.Any(i => i.OperatingState == EOperatingState.Run);
-
-    private void RunOrStopAllPLCs()
+    private void ExecuteForInstances(
+        Func<IInstance, bool> condition,
+        Action<IInstance> action,
+        string errorPrefix = "Failed")
     {
-        if (AnyPLCIsRunning)
+        foreach (var instance in managerFacade.InstanceHandler._instances.Where(condition))
         {
-            foreach (var instance in managerFacade.InstanceHandler._instances)
+            try
             {
-                try
-                {
-                    if (instance.OperatingState == EOperatingState.Run)
-                        instance.Stop();
-                }
-                catch (Exception e)
-                {
-                    Snackbar.Add($"Failed to stop {instance.Name}: {e.Message}", Severity.Error);
-                }
+                action(instance);
             }
-        }
-        else
-        {
-            foreach (var instance in managerFacade.InstanceHandler._instances)
+            catch (Exception e)
             {
-                try
-                {
-                    if (instance.OperatingState == EOperatingState.Stop)
-                        instance.Run();
-                }
-                catch (Exception e)
-                {
-                    Snackbar.Add($"Failed to run {instance.Name}: {e.Message}", Severity.Error);
-                }
+                Snackbar.Add($"{errorPrefix} {instance.Name}: {e.Message}", Severity.Error);
             }
         }
     }
+
+    private void PowerOnAllPLCs() => ExecuteForInstances(
+            i => true, // run for all
+            i => i.PowerOn(),
+            "Failed to power on"
+        );
+
+    private void PowerOffAllPLCs() => ExecuteForInstances(
+            i => true, // run for all
+            i => i.PowerOff(),
+            "Failed to power off"
+        );
+
+
+    private void RunAllPLCs() => ExecuteForInstances(
+            i => i.OperatingState != EOperatingState.Off && i.OperatingState == EOperatingState.Stop,
+            i => i.Run(),
+            "Failed to run"
+        );
+
+    private void StopAllPLCs() => ExecuteForInstances(
+            i => i.OperatingState == EOperatingState.Run,
+            i => i.Stop(),
+            "Failed to stop"
+        );
 
     private async Task ShowConfirmation(string message, Func<Task> onConfirmed)
     {
         var parameters = new DialogParameters
         {
-            ["Message"] = message,
-            ["OnConfirmed"] = onConfirmed
+            ["Message"] = message
         };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
 
         var dialog = DialogService.Show<ConfirmActionDialog>("Confirm Action", parameters, options);
-        await dialog.Result;
-    }
-
-    // Usage:
-    private async Task ConfirmRunOrStopAllPLCs()
-    {
-        var message = AnyPLCIsRunning
-            ? "Are you sure you want to stop all running PLCs?"
-            : "Are you sure you want to run all stopped PLCs?";
-
-        await ShowConfirmation(message, async () => RunOrStopAllPLCs());
-    }
-
-    private async Task ConfirmSetCpuAffinity()
-    {
-        var message = "Assign CPU affinity for all PLC instances?";
-
-        await ShowConfirmation(message, async () => AssignCpuAffinityToAllInstances());
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            await onConfirmed();
+        }
     }
 
     private string selectedRowStyleFunc(IInstance i, int rowNumber)

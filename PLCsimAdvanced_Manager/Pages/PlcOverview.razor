@@ -7,149 +7,204 @@
 @inject ISnackbar Snackbar
 @inject ManagerFacade managerFacade
 
-<div style="width: 100vw; min-width: 1000px; overflow-x: auto; justify-content: center; height:auto">
-    <div style="padding: 20px">
-        <MudText Typo="Typo.h6">Overview </MudText>
+<div style="width: 100vw; min-width: 1000px; overflow-x: auto; justify-content: center; height:auto; display: flex; flex-direction:column">
+	<div style="padding: 20px">
+		<MudText Typo="Typo.h6">Overview </MudText>
 
-        <MudAlert Severity="Severity.Warning">All instances that are powered on must have the same communication interface (softbus/TCPIP)</MudAlert>
-    </div>
-    <MudTable Items="@managerFacade.InstanceHandler._instances" GroupBy="@_groupDefinition" T="IInstance" @ref="mudTable"
-              Hover="true" Dense="true" Breakpoint="Breakpoint.Sm"
-              FixedHeader="true" Height="400px" Style="padding: 20px"
-              GroupHeaderStyle="background-color:var(--mud-palette-background-grey)">
-        <ToolBarContent>
-            <div style="display: flex; justify-content: space-between;">
-                @inject IDialogService DialogService
-                <MudButton Color="Color.Success" @onclick="OpenDialogNewPLC" Variant="Variant.Filled" Class="mr-2">
-                    Create new PLC
-                </MudButton>
-                <MudButton @onclick="OpenDialogStorage" Variant="Variant.Filled">
-                    Storage
-                </MudButton>
-                <MudTooltip Text="Runs/Stop each registered PLC instance">
-                    <MudButton 
-                       Color="@RunAllButtonColor" 
-                       Variant="Variant.Filled" 
-                       Class="ml-2"
-                       StartIcon="@RunAllButtonIcon"
-                       @onclick="ConfirmRunOrStopAllPLCs">
-                    @RunAllButtonText
-                    </MudButton>
-                </MudTooltip>
-                 <MudTooltip Text="Assign a CPU core to each PLC instance for process affinity">
-                    <MudButton Color="Color.Warning" Variant="Variant.Filled" Class="ml-2"
-                    StartIcon="@Icons.Material.Outlined.Memory"
-                    @onclick="ConfirmSetCpuAffinity">
-                    Assign CPU Affinity
-                    </MudButton>
-                </MudTooltip>
-            </div>
-        </ToolBarContent>
-        <ColGroup>
-            <col/>
-            <col/>
-            <col/>
-            <col/>
-            <col/>
-            <col/>
-            <col/>
-        </ColGroup>
-        <HeaderContent>
-            <MudTh>PLC Name</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Controller IP</MudTh>
-            <MudTh>CPU type</MudTh>
-            <MudTh>Controller Name</MudTh>
-            <MudTh>Assigned CPU</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <GroupHeaderTemplate>
-            <MudTh Class="mud-table-cell-custom-group" colspan="6">
-                @($"{context.GroupName}: {context.Key}")
-            </MudTh>
-        </GroupHeaderTemplate>
-        <RowTemplate>
-            <MudTd DataLabel="PLC Name">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div>
-                        <InstancePowerButton SelectedInstance="context"></InstancePowerButton>
-                        <InstanceRunStopButton SelectedInstance="context"></InstanceRunStopButton>
-                    </div>
-                    <div>
-                        @try
-                        {
-                            <MudLink Href="@($"instance/{context.Name}")">@context.Name</MudLink>
-                        }
-                        catch (Exception e)
-                        {
-                        }
-                    </div>
-                </div>
-            </MudTd>
-            <MudTd DataLabel="Status" Width="200px">
-                <InstanceOperatingstateChip SelectedInstance="context"></InstanceOperatingstateChip>
-            </MudTd>
-            <MudTd DataLabel="Controller IP">
-                <div class="d-flex align-items-start">
-                    <div class="ml-2">
-                        @foreach (var ip in context.ControllerIP)
-                        {
-                            <div>@ip</div>
-                        }
-                    </div>
-                    @if (context.ControllerIP.Length != 0)
-                    {
-                        <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="() => OpenDialogSetIPSettings(context)" Disabled="@(!(context.OperatingState == EOperatingState.Off || context.OperatingState == EOperatingState.Stop))"></MudIconButton>
-                    }
-                </div>
-            </MudTd>
-            <MudTd DataLabel="CPU type">@context.CPUType</MudTd>
-            <MudTd DataLabel="Controller Name">@context.ControllerName</MudTd>
-            <MudTd DataLabel="Assigned CPU">
-                @(instanceCpuAffinity.TryGetValue(context, out var cpu) ? cpu.ToString() : "N/A")
-            </MudTd>
-            <MudTd >
-                @if (context.CommunicationInterface == ECommunicationInterface.TCPIP)
-                {
-                    <MudTooltip Text="When powered off, this will swap communication interface">
-                        <MudChip Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                                   OnClick="() => { if (context.OperatingState == EOperatingState.Off) context.CommunicationInterface = ECommunicationInterface.Softbus; }">
-                            TCP/IP
-                        </MudChip>
-                    </MudTooltip>
-                }
-                else if (context.CommunicationInterface == ECommunicationInterface.Softbus)
-                {
-                    <MudTooltip Text="When powered off, this will swap communication interface">
-                        <MudChip Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small" OnClick="() => { if (context.OperatingState == EOperatingState.Off) context.CommunicationInterface = ECommunicationInterface.TCPIP; }">Softbus</MudChip>
-                    </MudTooltip>
-                }
-                <MudIconButton Icon="@Icons.Material.Outlined.History" Title="Snapshots" Size="Size.Small" @onclick="() => SeeSnapshots(context)" ></MudIconButton>
-                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Title="Delete" Size="Size.Small"
-                               @onclick="() => RemoveInstance(context)">
-                </MudIconButton>
-            
-            </MudTd>
+		<MudAlert Severity="Severity.Warning">All instances that are powered on must have the same communication interface (softbus/TCPIP)</MudAlert>
+	</div>
+	<MudTable Items="@managerFacade.InstanceHandler._instances" GroupBy="@_groupDefinition" T="IInstance" @ref="mudTable"
+			  Hover="true" Dense="true" Breakpoint="Breakpoint.Sm"
+			  FixedHeader="true" Height="auto" Style="padding: 20px"
+			  GroupHeaderStyle="background-color:var(--mud-palette-background-grey)">
+		<ToolBarContent>
+			<div style="display: flex; justify-content: space-between;">
+				@inject IDialogService DialogService
 
-        </RowTemplate>
+				<MudButton Color="Color.Success" @onclick="OpenDialogNewPLC" Variant="Variant.Filled" Class="mr-2">
+					Create new PLC
+				</MudButton>
+				<MudButton @onclick="OpenDialogStorage" Variant="Variant.Filled">
+					Storage
+				</MudButton>
 
-    </MudTable>
+				<MudDivider Vertical="true" FlexItem="true" />
+
+				<MudTooltip Text="Turns on each registered PLC instance">
+					<MudButton Color="Color.Info"
+							   Variant="Variant.Filled"
+							   Class="ml-2"
+							   StartIcon="@Icons.Material.Outlined.PowerSettingsNew"
+							   @onclick="@(async () => await ShowConfirmation(
+			  		  "Are you sure you want to power on all for all instances?",
+    		  async () => await Task.Run(() => PowerOnAllPLCs())
+		  ))"
+						Disabled="@(!AnyInstanceRegistered & !AnyInstancePoweredOff)">
+						Power On All
+					</MudButton>
+				</MudTooltip>
+				<MudTooltip Text="Turns off each registered PLC instance">
+					<MudButton Color="Color.Error"
+							   Variant="Variant.Filled"
+							   Class="ml-2"
+							   StartIcon="@Icons.Material.Outlined.PowerOff"
+							   @onclick="@(async () => await ShowConfirmation(
+    		  		  "Are you sure you want to power off for all instances?",
+    		  async () => await Task.Run(() => PowerOffAllPLCs())
+		  ))"
+						Disabled="@(!AnyIstanceIsRunning & !AnyInstancePoweredOn)">
+						Power Off All
+					</MudButton>
+				</MudTooltip>
+
+				<MudDivider Vertical="true" FlexItem="true" />
+
+				<MudTooltip Text="Runs each registered PLC instance">
+					<MudButton Color="Color.Success"
+							   Variant="Variant.Outlined"
+							   Size="Size.Small"
+							   Class="ml-2"
+							   StartIcon="@Icons.Material.Outlined.PlayArrow"
+							   @onclick="@(async () => await ShowConfirmation(
+    		  		  "Are you sure you want to run all instances?",
+    		  async () => await Task.Run(() => RunAllPLCs())
+				))"
+						Disabled="@(!AnyInstancePoweredOn)">
+						Run All
+					</MudButton>
+				</MudTooltip>
+				<MudTooltip Text="Stops each registered PLC instance">
+					<MudButton Color="Color.Error"
+							   Variant="Variant.Outlined"
+							   Size="Size.Small"
+							   Class="ml-2"
+							   StartIcon="@Icons.Material.Outlined.Stop"
+							   @onclick="@(async () => await ShowConfirmation(
+    		  		  		  "Are you sure you want to stop all instances?",
+    		  		  async () => await Task.Run(() => StopAllPLCs())
+		  		  ))"
+						Disabled="@(!AnyIstanceIsRunning)">
+						Stop All
+					</MudButton>
+				</MudTooltip>
+				<MudTooltip Text="Assign a CPU core to each PLC instance for process affinity">
+					<MudButton Color="Color.Warning"
+							   Variant="Variant.Outlined" Class="ml-2"
+							   Size="Size.Small"
+							   StartIcon="@Icons.Material.Outlined.Memory"
+							   @onclick="@(async () => await ShowConfirmation(
+    		  		  "Are you sure you want to assign CPU affinity for all instances?",
+    		  		  		  async () => await Task.Run(() => AssignCpuAffinityToAllInstances())
+		  		  ))"
+						Disabled="@(!AnyIstanceIsRunning)">
+						Assign CPU Affinity
+					</MudButton>
+				</MudTooltip>
+			</div>
+		</ToolBarContent>
+		<ColGroup>
+            <col/>
+            <col/>
+            <col/>
+            <col/>
+            <col/>
+            <col/>
+            <col/>
+		</ColGroup>
+		<HeaderContent>
+			<MudTh>PLC Name</MudTh>
+			<MudTh>Status</MudTh>
+			<MudTh>Controller IP</MudTh>
+			<MudTh>CPU type</MudTh>
+			<MudTh>Controller Name</MudTh>
+			<MudTh>Assigned CPU</MudTh>
+			<MudTh>Actions</MudTh>
+		</HeaderContent>
+		<GroupHeaderTemplate>
+			<MudTh Class="mud-table-cell-custom-group" colspan="6">
+				@($"{context.GroupName}: {context.Key}")
+			</MudTh>
+		</GroupHeaderTemplate>
+		<RowTemplate>
+			<MudTd DataLabel="PLC Name">
+				<div style="display: flex; align-items: center; gap: 10px;">
+					<div>
+						<InstancePowerButton SelectedInstance="context"></InstancePowerButton>
+						<InstanceRunStopButton SelectedInstance="context"></InstanceRunStopButton>
+					</div>
+					<div>
+						@try
+						{
+							<MudLink Href="@($"instance/{context.Name}")">@context.Name</MudLink>
+						}
+						catch (Exception e)
+						{
+						}
+					</div>
+				</div>
+			</MudTd>
+			<MudTd DataLabel="Status" Width="200px">
+				<InstanceOperatingstateChip SelectedInstance="context"></InstanceOperatingstateChip>
+			</MudTd>
+			<MudTd DataLabel="Controller IP">
+				<div class="d-flex align-items-start">
+					<div class="ml-2">
+						@foreach (var ip in context.ControllerIP)
+						{
+							<div>@ip</div>
+						}
+					</div>
+					@if (context.ControllerIP.Length != 0)
+					{
+						<MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="() => OpenDialogSetIPSettings(context)" Disabled="@(!(context.OperatingState == EOperatingState.Off || context.OperatingState == EOperatingState.Stop))"></MudIconButton>
+					}
+				</div>
+			</MudTd>
+			<MudTd DataLabel="CPU type">@context.CPUType</MudTd>
+			<MudTd DataLabel="Controller Name">@context.ControllerName</MudTd>
+			<MudTd DataLabel="Assigned CPU">
+				@(instanceCpuAffinity.TryGetValue(context, out var cpu) ? cpu.ToString() : "N/A")
+			</MudTd>
+			<MudTd>
+				@if (context.CommunicationInterface == ECommunicationInterface.TCPIP)
+				{
+					<MudTooltip Text="When powered off, this will swap communication interface">
+						<MudChip Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+								 OnClick="() => { if (context.OperatingState == EOperatingState.Off) context.CommunicationInterface = ECommunicationInterface.Softbus; }">
+							TCP/IP
+						</MudChip>
+					</MudTooltip>
+				}
+				else if (context.CommunicationInterface == ECommunicationInterface.Softbus)
+				{
+					<MudTooltip Text="When powered off, this will swap communication interface">
+						<MudChip Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small" OnClick="() => { if (context.OperatingState == EOperatingState.Off) context.CommunicationInterface = ECommunicationInterface.TCPIP; }">Softbus</MudChip>
+					</MudTooltip>
+				}
+				<MudIconButton Icon="@Icons.Material.Outlined.History" Title="Snapshots" Size="Size.Small" @onclick="() => SeeSnapshots(context)"></MudIconButton>
+				<MudIconButton Icon="@Icons.Material.Outlined.Delete" Title="Delete" Size="Size.Small"
+							   @onclick="() => RemoveInstance(context)">
+				</MudIconButton>
+
+			</MudTd>
+
+		</RowTemplate>
+
+	</MudTable>
 </div>
 
 
 @code
 {
-    public string ip;
-    public IMask ipv4Mask = RegexMask.IPv4();
-    STagInfo[] _tagInfos;
+	public string ip;
+	public IMask ipv4Mask = RegexMask.IPv4();
+	STagInfo[] _tagInfos;
 
-    private TableGroupDefinition<IInstance> _groupDefinition = new()
-    {
-        GroupName = "Communication",
-        Indentation = false,
-        Expandable = false,
-        Selector = (e) => e.CommunicationInterface
-    };
-    
-    private Color RunAllButtonColor => AnyPLCIsRunning ? Color.Error : Color.Success;
+	private TableGroupDefinition<IInstance> _groupDefinition = new()
+	{
+		GroupName = "Communication",
+		Indentation = false,
+		Expandable = false,
+		Selector = (e) => e.CommunicationInterface
+	};
 }
